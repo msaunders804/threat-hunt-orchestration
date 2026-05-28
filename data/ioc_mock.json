@@ -1,0 +1,43 @@
+{
+  "ips": {
+    "192.168.1.1":       { "reputation": "clean",      "category": "private",        "description": "RFC 1918 private address" },
+    "10.0.0.1":          { "reputation": "clean",      "category": "private",        "description": "RFC 1918 private address" },
+    "172.16.0.1":        { "reputation": "clean",      "category": "private",        "description": "RFC 1918 private address" },
+    "8.8.8.8":           { "reputation": "clean",      "category": "dns_resolver",   "owner": "Google",         "description": "Google Public DNS" },
+    "1.1.1.1":           { "reputation": "clean",      "category": "dns_resolver",   "owner": "Cloudflare",     "description": "Cloudflare Public DNS" },
+    "198.51.100.10":     { "reputation": "malicious",  "category": "c2_server",      "severity": "critical",    "campaigns": ["APT-41-sim"],   "description": "Known C2 infrastructure — beacon traffic observed" },
+    "198.51.100.22":     { "reputation": "malicious",  "category": "exploit_kit",    "severity": "high",        "campaigns": ["EK-sim"],       "description": "Exploit kit landing page host" },
+    "203.0.113.42":      { "reputation": "suspicious", "category": "scanner",        "severity": "medium",      "tags": ["mass-scanner", "brute-force"], "description": "Mass port scanner — frequent login attempts reported" },
+    "203.0.113.99":      { "reputation": "suspicious", "category": "proxy",          "severity": "medium",      "tags": ["open-proxy"],        "description": "Open HTTP proxy — commonly abused for anonymization" },
+    "185.220.101.1":     { "reputation": "malicious",  "category": "tor_exit_node",  "severity": "high",        "description": "Active Tor exit node — traffic origin is unattributable" },
+    "185.220.101.50":    { "reputation": "malicious",  "category": "tor_exit_node",  "severity": "high",        "description": "Active Tor exit node" },
+    "91.108.4.1":        { "reputation": "suspicious", "category": "vpn_exit",       "severity": "low",         "description": "Commercial VPN exit node" },
+    "45.33.32.156":      { "reputation": "clean",      "category": "scan_service",   "owner": "Shodan",         "description": "Shodan crawler — benign internet scanning service" }
+  },
+  "domains": {
+    "google.com":                    { "reputation": "clean",      "category": "search_engine",  "description": "Google Search" },
+    "microsoft.com":                 { "reputation": "clean",      "category": "software_vendor","description": "Microsoft" },
+    "cloudflare.com":                { "reputation": "clean",      "category": "cdn",            "description": "Cloudflare CDN/DNS" },
+    "cdn.example.net":               { "reputation": "unknown",    "category": "cdn",            "description": "No reputation data; CDN subdomain pattern" },
+    "evildomain.xyz":                { "reputation": "malicious",  "category": "phishing",       "severity": "critical",  "campaigns": ["phish-2025-q1"],  "description": "Active phishing page mimicking corporate SSO" },
+    "update-microsoft-secure.com":   { "reputation": "malicious",  "category": "typosquatting",  "severity": "high",      "description": "Typosquat of microsoft.com — drops info-stealer" },
+    "malware-c2.ru":                 { "reputation": "malicious",  "category": "c2_server",      "severity": "critical",  "campaigns": ["Emotet-sim"],     "description": "Emotet C2 domain — active as of last 30 days" },
+    "pastebin.com":                  { "reputation": "suspicious", "category": "paste_site",     "severity": "low",       "description": "Legitimate service, frequently abused for payload staging" },
+    "bit.ly":                        { "reputation": "suspicious", "category": "url_shortener",  "severity": "low",       "description": "URL shortener — destination unknown without expansion" },
+    "raw.githubusercontent.com":     { "reputation": "clean",      "category": "code_hosting",   "description": "GitHub raw content delivery" },
+    "cobalt-panel.onion.sh":         { "reputation": "malicious",  "category": "c2_server",      "severity": "critical",  "description": "Clearnet proxy to Tor-hosted C2 panel" }
+  },
+  "hashes": {
+    "d41d8cd98f00b204e9800998ecf8427e":                                 { "hash_type": "md5",    "reputation": "clean",      "description": "Empty file (zero bytes)" },
+    "44d88612fea8a8f36de82e1278abb02f":                                 { "hash_type": "md5",    "reputation": "malicious",  "severity": "informational", "malware_family": "EICAR-Test-File",    "description": "AV test file — not a live threat" },
+    "098f6bcd4621d373cade4e832627b4f6":                                 { "hash_type": "md5",    "reputation": "malicious",  "severity": "critical",      "malware_family": "Cobalt Strike Beacon","description": "Reflective PE loader stage 1; Cobalt Strike 4.x beacon" },
+    "5d41402abc4b2a76b9719d911017c592":                                 { "hash_type": "md5",    "reputation": "unknown",    "description": "Hash not in database" },
+    "da39a3ee5e6b4b0d3255bfef95601890afd80709":                         { "hash_type": "sha1",   "reputation": "clean",      "description": "Empty file (zero bytes)" },
+    "a9993e364706816aba3e25717850c26c9cd0d89d":                         { "hash_type": "sha1",   "reputation": "malicious",  "severity": "critical",      "malware_family": "Cobalt Strike Beacon","description": "Known beacon DLL; seen in hands-on-keyboard intrusions" },
+    "adc83b19e793491b1c6ea0fd8b46cd9f32e592fc":                         { "hash_type": "sha1",   "reputation": "suspicious", "severity": "medium",        "description": "Associated with dropper tooling; low-confidence attribution" },
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855": { "hash_type": "sha256",  "reputation": "clean",      "description": "Empty file (zero bytes)" },
+    "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08": { "hash_type": "sha256",  "reputation": "malicious",  "severity": "high",          "malware_family": "Mimikatz",           "description": "Mimikatz sekurlsa::logonpasswords variant; credential dumping" },
+    "2c624232cdd221771294dfbb310acbc8db9390ac4f4e1b6e5f9d4a4a6f0d8c6f": { "hash_type": "sha256",  "reputation": "suspicious", "severity": "medium",        "description": "PsExec wrapper seen in lateral movement; may be legitimate admin tool" },
+    "ba7816bf8f01cfea414140de5dae2ec73b00361bbef0469132d0eb4a8c99c29d": { "hash_type": "sha256",  "reputation": "unknown",    "description": "Hash not in database" }
+  }
+}

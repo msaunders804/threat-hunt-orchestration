@@ -13,13 +13,21 @@ logger = logging.getLogger(__name__)
 
 CONFIDENCE_THRESHOLD = 0.40
 
-# Cisco IOS keywords — any hit means the injected file is a router config
+# Cisco IOS keywords — any hit means the injected file is a router config.
+# Covers both full running-configs (which open with ! / version X.Y / no service...)
+# and config snippets that jump straight into interface / ACL sections.
 _IOS_KEYWORDS = {
     "interface ", "ip address ", "line vty", "line con ",
     "hostname ", "router ospf", "router eigrp", "router bgp",
     "ip route ", "access-list ", "ip access-list", "enable secret",
     "service password", "snmp-server", "logging buffered",
     "ntp server", "crypto isakmp", "spanning-tree",
+    # Full running-config openers
+    "no service pad", "no service ", "service tcp-keepalives",
+    "version 12.", "version 15.", "version 16.", "version 17.",
+    "ip subnet-zero", "no ip domain", "ip domain-name",
+    "aaa new-model", "vrf definition", "vrf forwarding",
+    "crypto pki", "ip inspect", "zone-pair security",
 }
 
 # Pattern that matches plugin-injected file blocks:

@@ -1,7 +1,15 @@
 import json
 import logging
+import re
 
 from ..client import _client, _model
+
+
+def _strip_fences(text: str) -> str:
+    text = text.strip()
+    text = re.sub(r'^```(?:json)?\s*\n?', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'\n?```\s*$', '', text)
+    return text.strip()
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +75,7 @@ def classify_intent(state: dict) -> dict:
         messages=[{"role": "user", "content": question}],
     )
 
-    raw = response.content[0].text.strip()
+    raw = _strip_fences(response.content[0].text)
 
     try:
         parsed = json.loads(raw)

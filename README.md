@@ -2,7 +2,7 @@
 
 A self-hosted FastAPI + LangGraph service that routes natural language threat hunting questions to specialized AI agents and returns structured markdown findings.
 
-Designed as an optional backend for the [Obsidian Collab Relay](https://github.com/NormalTechGuy/Obsidian-Collab-Relay) Jester bot, but usable by any HTTP client.
+Designed as an optional backend for the [Obsidian Collab Relay](https://github.com/NormalTechGuy/Obsidian-Collab-Relay)  bot, but usable by any HTTP client.
 
 ---
 

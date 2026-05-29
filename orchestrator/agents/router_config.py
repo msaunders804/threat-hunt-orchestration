@@ -4,6 +4,8 @@ import re
 
 from ..client import _client, _model
 
+logger = logging.getLogger(__name__)
+
 
 def _strip_fences(text: str) -> str:
     text = text.strip()
@@ -11,7 +13,6 @@ def _strip_fences(text: str) -> str:
     text = re.sub(r'\n?```\s*$', '', text)
     return text.strip()
 
-logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """You are a senior network security engineer and threat hunter specializing in Cisco IOS device hardening, configuration auditing, and post-compromise analysis.
 
@@ -50,7 +51,6 @@ Severity guide:
 
 If no configuration text is present in the input, return findings: [] and note the absence in summary."""
 
-# Few-shot example: short snippet with two clear findings
 _FEW_SHOT: list[dict] = [
     {
         "role": "user",
@@ -114,10 +114,16 @@ _FEW_SHOT: list[dict] = [
 ]
 
 
-def analyze_router_config(state: dict) -> dict:
-    entities = state.get("entities", {})
-    config_blob = entities.get("config_blob") or state["question"]
+def analyze_router_config(config_blob: str) -> str:
+    """Analyze a Cisco IOS router or switch configuration for security vulnerabilities.
 
+    Use this tool when the user provides a Cisco IOS configuration — either pasted directly
+    or inside a file injection block marked with '--- Contents of X ---' / '--- End of X ---'.
+    Also use when the user asks to audit, harden, or review a network device config.
+
+    Args:
+        config_blob: The full Cisco IOS configuration text to analyze
+    """
     logger.info("Analyzing router config (config_len=%d)", len(config_blob))
 
     messages = _FEW_SHOT + [{"role": "user", "content": config_blob}]
@@ -157,4 +163,4 @@ def analyze_router_config(state: dict) -> dict:
         cache_read,
     )
 
-    return {**state, "agent_output": parsed}
+    return json.dumps(parsed)

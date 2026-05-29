@@ -1,168 +1,60 @@
 import logging
-import re
-from typing import TypedDict
+import os
 
-from langgraph.graph import END, StateGraph
+from deepagents import create_deep_agent
 
-from .agents.intent_classifier import classify_intent
 from .agents.ioc_enrichment import enrich_iocs
 from .agents.router_config import analyze_router_config
-from .agents.synthesis import synthesize_findings
 
 logger = logging.getLogger(__name__)
 
-CONFIDENCE_THRESHOLD = 0.40
+# deepagents uses "provider:model-id" strings.
+# Bedrock support depends on whether your deepagents build includes langchain-aws;
+# for Bedrock, set INFERENCE_PROVIDER=bedrock and override _MODEL below manually.
+_MODEL = "anthropic:" + os.environ.get("DIRECT_MODEL", "claude-sonnet-4-6")
 
-# Cisco IOS keywords — any hit means the injected file is a router config.
-# Covers both full running-configs (which open with ! / version X.Y / no service...)
-# and config snippets that jump straight into interface / ACL sections.
-_IOS_KEYWORDS = {
-    "interface ", "ip address ", "line vty", "line con ",
-    "hostname ", "router ospf", "router eigrp", "router bgp",
-    "ip route ", "access-list ", "ip access-list", "enable secret",
-    "service password", "snmp-server", "logging buffered",
-    "ntp server", "crypto isakmp", "spanning-tree",
-    # Full running-config openers
-    "no service pad", "no service ", "service tcp-keepalives",
-    "version 12.", "version 15.", "version 16.", "version 17.",
-    "ip subnet-zero", "no ip domain", "ip domain-name",
-    "aaa new-model", "vrf definition", "vrf forwarding",
-    "crypto pki", "ip inspect", "zone-pair security",
-}
+SYSTEM_PROMPT = """You are a threat hunter for a network security operations team. \
+Your responses are displayed in an Obsidian markdown chat window — use markdown formatting.
 
-# Pattern that matches plugin-injected file blocks:
-# --- Contents of <name> ---
-# <content>
-# --- End of <name> ---
-_INJECTION_RE = re.compile(
-    r"--- Contents of .+? ---\n(.*?)\n--- End of .+? ---",
-    re.DOTALL,
+## Tool guidance
+- Call `enrich_iocs` when the user provides IP addresses, domain names, or file hashes to check, \
+or asks whether an indicator is malicious, suspicious, or known bad.
+- Call `analyze_router_config` when the user provides a Cisco IOS router or switch configuration — \
+either pasted directly or inside a file injection block ("--- Contents of X ---" / "--- End of X ---"). \
+Also call it when asked to audit, harden, or review a network device config.
+- Call both tools when the question involves both IOCs and a router config, then correlate the findings.
+- If the input is genuinely ambiguous — no config lines, no IOC indicators — ask one focused \
+clarifying question rather than guessing.
+
+## Report format
+Structure every response as a markdown report:
+1. **Executive Summary** (2-3 sentences)
+2. **Findings** — grouped by severity, most critical first. \
+Severity emoji: 🔴 critical  🟠 high  🟡 medium  🔵 low  ⚪ informational
+3. **Recommended Actions** — bullet list, specific and ordered by urgency
+4. **Risk Score** — if a numeric score is present in the data, display as `Risk: XX/100`
+
+Additional rules:
+- Max 500 words. Use headers, bold, and bullets for scannability.
+- Never include raw JSON in the output.
+- For IOC results: lead with verdict counts (e.g. "3 of 5 IOCs are malicious"), \
+then list each IOC with its reputation and threat category.
+- For router config results: lead with the risk score and count of critical/high findings, \
+then summarize each finding in one bullet.
+- If tool results are empty or findings list is empty, say so plainly and suggest \
+what additional information would help."""
+
+_agent = create_deep_agent(
+    model=_MODEL,
+    tools=[enrich_iocs, analyze_router_config],
+    system_prompt=SYSTEM_PROMPT,
 )
 
 
-class HuntState(TypedDict):
-    question: str
-    intent: str
-    confidence: float
-    entities: dict
-    agent_output: dict
-    final_response: str
-
-
-def _preprocess(state: HuntState) -> HuntState:
-    """Extract vault-injected file blocks without an LLM call.
-
-    If the message contains a --- Contents of X --- block with recognisable
-    Cisco IOS keywords, pre-classify as router_config at 0.95 confidence and
-    populate config_blob so the classifier can be skipped entirely.
-    """
-    match = _INJECTION_RE.search(state["question"])
-    if not match:
-        return state
-
-    content = match.group(1).strip()
-    content_lower = content.lower()
-
-    if any(kw in content_lower for kw in _IOS_KEYWORDS):
-        logger.info("Pre-processor: Cisco IOS config detected in injected block — bypassing classifier")
-        return {
-            **state,
-            "intent": "router_config",
-            "confidence": 0.95,
-            "entities": {
-                "ips": [],
-                "domains": [],
-                "hashes": [],
-                "config_blob": content,
-            },
-        }
-
-    logger.info("Pre-processor: injection block found but no IOS keywords — falling through to classifier")
-    return state
-
-
-def _clarify(state: HuntState) -> HuntState:
-    return {
-        **state,
-        "final_response": (
-            "I need a bit more context to help you. Could you clarify:\n\n"
-            "- Are you analyzing a **Cisco IOS router or switch configuration**? "
-            "If so, please paste the config snippet or use `@agent analyze [[filename]]`.\n"
-            "- Are you looking up **indicators of compromise** (IP addresses, domains, file hashes)? "
-            "If so, please list them.\n\n"
-            f"_(Classified intent: `{state['intent']}`, confidence: {state['confidence']:.0%})_"
-        ),
-    }
-
-
-def _route_preprocess(state: HuntState) -> str:
-    """After pre-processing: skip the classifier if already confident."""
-    if state["confidence"] >= CONFIDENCE_THRESHOLD and state["intent"] in ("router_config", "ioc_enrichment"):
-        logger.info("Pre-processor confident (%.2f) — routing directly to %s", state["confidence"], state["intent"])
-        return state["intent"]
-    return "classify"
-
-
-def _route_classify(state: HuntState) -> str:
-    """After classifier: route to agent or clarify."""
-    if state["confidence"] < CONFIDENCE_THRESHOLD or state["intent"] == "unknown":
-        logger.info("Classifier low confidence (%.2f) or unknown — routing to clarify", state["confidence"])
-        return "clarify"
-    return state["intent"]
-
-
-def _build_graph():
-    workflow = StateGraph(HuntState)
-
-    workflow.add_node("preprocess", _preprocess)
-    workflow.add_node("classify", classify_intent)
-    workflow.add_node("router_config", analyze_router_config)
-    workflow.add_node("ioc_enrichment", enrich_iocs)
-    workflow.add_node("clarify", _clarify)
-    workflow.add_node("synthesize", synthesize_findings)
-
-    workflow.set_entry_point("preprocess")
-
-    workflow.add_conditional_edges(
-        "preprocess",
-        _route_preprocess,
-        {
-            "router_config": "router_config",
-            "ioc_enrichment": "ioc_enrichment",
-            "classify": "classify",
-        },
-    )
-
-    workflow.add_conditional_edges(
-        "classify",
-        _route_classify,
-        {
-            "router_config": "router_config",
-            "ioc_enrichment": "ioc_enrichment",
-            "clarify": "clarify",
-        },
-    )
-
-    workflow.add_edge("router_config", "synthesize")
-    workflow.add_edge("ioc_enrichment", "synthesize")
-    workflow.add_edge("clarify", END)
-    workflow.add_edge("synthesize", END)
-
-    return workflow.compile()
-
-
-_graph = _build_graph()
-
-_INITIAL_STATE: HuntState = {
-    "question": "",
-    "intent": "",
-    "confidence": 0.0,
-    "entities": {},
-    "agent_output": {},
-    "final_response": "",
-}
-
-
 def run_hunt(question: str) -> str:
-    result = _graph.invoke({**_INITIAL_STATE, "question": question})
-    return result["final_response"]
+    result = _agent.invoke({"messages": [{"role": "user", "content": question}]})
+    messages = result.get("messages", [])
+    if not messages:
+        return "No response generated."
+    last = messages[-1]
+    return last.content if hasattr(last, "content") else str(last)

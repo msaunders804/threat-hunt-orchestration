@@ -24,12 +24,17 @@ def _lookup(ioc_type: str, value: str) -> dict:
     return {"ioc": value, "ioc_type": ioc_type, "found": False, "reputation": "unknown"}
 
 
-def enrich_iocs(state: dict) -> dict:
-    entities = state.get("entities", {})
-    ips = entities.get("ips") or []
-    domains = entities.get("domains") or []
-    hashes = entities.get("hashes") or []
+def enrich_iocs(ips: list[str], domains: list[str], hashes: list[str]) -> str:
+    """Look up IP addresses, domain names, and file hashes against the threat intelligence database.
 
+    Use this tool when the user wants to check whether IPs, domains, or file hashes are
+    malicious, suspicious, or known bad. Returns reputation and threat category for each indicator.
+
+    Args:
+        ips: List of IPv4 addresses to look up (e.g. ["1.2.3.4", "5.6.7.8"])
+        domains: List of domain names to check (e.g. ["evil.com", "bad.net"])
+        hashes: List of MD5/SHA1/SHA256 file hashes to check
+    """
     results: list[dict] = []
     for ip in ips:
         results.append(_lookup("ips", ip))
@@ -40,7 +45,7 @@ def enrich_iocs(state: dict) -> dict:
 
     by_rep = lambda r, rep: [x for x in r if x.get("reputation") == rep]
 
-    agent_output = {
+    summary = {
         "results": results,
         "total": len(results),
         "malicious_count": len(by_rep(results, "malicious")),
@@ -51,11 +56,11 @@ def enrich_iocs(state: dict) -> dict:
 
     logger.info(
         "IOC enrichment: total=%d malicious=%d suspicious=%d clean=%d unknown=%d",
-        agent_output["total"],
-        agent_output["malicious_count"],
-        agent_output["suspicious_count"],
-        agent_output["clean_count"],
-        agent_output["unknown_count"],
+        summary["total"],
+        summary["malicious_count"],
+        summary["suspicious_count"],
+        summary["clean_count"],
+        summary["unknown_count"],
     )
 
-    return {**state, "agent_output": agent_output}
+    return json.dumps(summary)

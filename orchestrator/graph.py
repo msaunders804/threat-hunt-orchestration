@@ -2,6 +2,7 @@ import logging
 import os
 
 from deepagents import create_deep_agent
+from langgraph.checkpoint import MemorySaver
 
 from .agents.ioc_enrichment import enrich_iocs
 from .agents.router_config import analyze_router_config
@@ -12,6 +13,8 @@ logger = logging.getLogger(__name__)
 # Bedrock support depends on whether your deepagents build includes langchain-aws;
 # for Bedrock, set INFERENCE_PROVIDER=bedrock and override _MODEL below manually.
 _MODEL = "anthropic:" + os.environ.get("DIRECT_MODEL", "claude-sonnet-4-6")
+
+_checkpoint = MemorySaver()
 
 SYSTEM_PROMPT = """You are a threat hunter for a network security operations team. \
 Your responses are displayed in an Obsidian markdown chat window — use markdown formatting.
@@ -48,11 +51,13 @@ _agent = create_deep_agent(
     model=_MODEL,
     tools=[enrich_iocs, analyze_router_config],
     system_prompt=SYSTEM_PROMPT,
+    checkpoint=_checkpoint,
 )
 
 
-def run_hunt(question: str) -> str:
-    result = _agent.invoke({"messages": [{"role": "user", "content": question}]})
+def run_hunt(question: str, thread_id: str = "default") -> str:
+    config = {"configurable": {"thread_id": thread_id}}
+    result = _agent.invoke({"messages": [{"role": "user", "content": question}]}, config=config)
     messages = result.get("messages", [])
     if not messages:
         return "No response generated."

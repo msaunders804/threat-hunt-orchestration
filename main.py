@@ -30,7 +30,7 @@ app = FastAPI(title="Threat Hunt Orchestrator", lifespan=lifespan)
 
 class QueryRequest(BaseModel):
     question: str
-
+    session_id: str = "default"
 
 @app.get("/health")
 async def health():
@@ -41,7 +41,7 @@ async def health():
 async def api_query(req: QueryRequest):
     logger.info("Query received (len=%d): %s", len(req.question), req.question[:120])
     try:
-        summary = await asyncio.to_thread(run_hunt, req.question)
+        summary = await asyncio.to_thread(run_hunt, req.question, req.session_id)
         return {"summary": summary}
     except Exception as exc:
         logger.exception("Orchestrator error")

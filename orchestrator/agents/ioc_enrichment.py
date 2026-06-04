@@ -1,66 +1,67 @@
-import json
 import logging
-from pathlib import Path
+import os
+
+from deepagents import create_deep_agent
+
+from .tools.ioc_tools import lookup_domain, lookup_hash, lookup_ip
 
 logger = logging.getLogger(__name__)
 
-_DATA_PATH = Path(__file__).parent.parent.parent / "data" / "ioc_mock.json"
-_ioc_db: dict | None = None
+_MODEL = "anthropic:" + os.environ.get("DIRECT_MODEL", "claude-sonnet-4-6")
 
+_SYSTEM_PROMPT = """You are a threat intelligence analyst. Your job is to investigate every IOC \
+provided by calling the available lookup tools, then write a concise markdown threat intelligence report.
 
-def _load_db() -> dict:
-    global _ioc_db
-    if _ioc_db is None:
-        with open(_DATA_PATH, encoding="utf-8") as f:
-            _ioc_db = json.load(f)
-    return _ioc_db
+Process:
+1. Call lookup_ip, lookup_domain, or lookup_hash for EVERY indicator provided — do not skip any.
+2. After all lookups are complete, write your report. Use markdown formatting.
 
+Report structure:
+- **Verdict summary** — lead with counts: e.g. "3 of 5 IOCs are malicious"
+- **Findings** — list each IOC with its reputation, category, and key details. \
+  Severity emoji: 🔴 malicious  🟡 suspicious  🟢 clean  ⚪ unknown
+- **Analyst Notes** — one or two sentences on patterns, clustering, or shared campaigns
+- **Recommended Actions** — specific next steps ordered by urgency
 
-def _lookup(ioc_type: str, value: str) -> dict:
-    db = _load_db()
-    entry = db.get(ioc_type, {}).get(value)
-    if entry:
-        return {"ioc": value, "ioc_type": ioc_type, "found": True, **entry}
-    return {"ioc": value, "ioc_type": ioc_type, "found": False, "reputation": "unknown"}
+Rules: max 400 words, no raw JSON in output."""
+
+_agent = create_deep_agent(
+    model=_MODEL,
+    tools=[lookup_ip, lookup_domain, lookup_hash],
+    system_prompt=_SYSTEM_PROMPT,
+)
 
 
 def enrich_iocs(ips: list[str], domains: list[str], hashes: list[str]) -> str:
-    """Look up IP addresses, domain names, and file hashes against the threat intelligence database.
+    """Look up indicators of compromise against threat intelligence databases.
 
-    Use this tool when the user wants to check whether IPs, domains, or file hashes are
-    malicious, suspicious, or known bad. Returns reputation and threat category for each indicator.
+    Use this tool when the user provides IP addresses, domain names, or file hashes
+    to check, or asks whether an indicator is malicious, suspicious, or known bad.
 
     Args:
-        ips: List of IPv4 addresses to look up (e.g. ["1.2.3.4", "5.6.7.8"])
-        domains: List of domain names to check (e.g. ["evil.com", "bad.net"])
-        hashes: List of MD5/SHA1/SHA256 file hashes to check
+        ips: IPv4 addresses to look up (e.g. ["198.51.100.10", "8.8.8.8"])
+        domains: Domain names to look up (e.g. ["evildomain.xyz", "google.com"])
+        hashes: MD5, SHA1, or SHA256 file hashes to look up
+
+    Returns:
+        Markdown threat intelligence report with reputation and findings for each IOC.
     """
-    results: list[dict] = []
-    for ip in ips:
-        results.append(_lookup("ips", ip))
-    for domain in domains:
-        results.append(_lookup("domains", domain))
-    for h in hashes:
-        results.append(_lookup("hashes", h))
+    logger.info("enrich_iocs: ips=%d domains=%d hashes=%d", len(ips), len(domains), len(hashes))
 
-    by_rep = lambda r, rep: [x for x in r if x.get("reputation") == rep]
+    lines = []
+    if ips:
+        lines.append(f"IPs: {', '.join(ips)}")
+    if domains:
+        lines.append(f"Domains: {', '.join(domains)}")
+    if hashes:
+        lines.append(f"Hashes: {', '.join(hashes)}")
+    question = "Look up these IOCs and report on their reputation:\n" + "\n".join(lines)
 
-    summary = {
-        "results": results,
-        "total": len(results),
-        "malicious_count": len(by_rep(results, "malicious")),
-        "suspicious_count": len(by_rep(results, "suspicious")),
-        "clean_count": len(by_rep(results, "clean")),
-        "unknown_count": len(by_rep(results, "unknown")),
-    }
-
-    logger.info(
-        "IOC enrichment: total=%d malicious=%d suspicious=%d clean=%d unknown=%d",
-        summary["total"],
-        summary["malicious_count"],
-        summary["suspicious_count"],
-        summary["clean_count"],
-        summary["unknown_count"],
-    )
-
-    return json.dumps(summary)
+    result = _agent.invoke({"messages": [{"role": "user", "content": question}]})
+    messages = result.get("messages", [])
+    if not messages:
+        return "IOC enrichment returned no results."
+    last = messages[-1]
+    report = last.content if hasattr(last, "content") else str(last)
+    logger.info("enrich_iocs complete: report_len=%d", len(report))
+    return report

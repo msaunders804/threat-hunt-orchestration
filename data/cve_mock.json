@@ -1,0 +1,44 @@
+{
+  "CVE-2017-6627": {
+    "cvss": 7.5,
+    "severity": "high",
+    "affected": "Cisco IOS 12.x, 15.x — SNMP",
+    "description": "SNMP community string disclosure allows unauthenticated remote information gathering via crafted SNMP requests.",
+    "remediation": "Disable SNMPv1/v2c; migrate to SNMPv3 with authPriv (SHA + AES-128). Restrict with: snmp-server community <string> RO <ACL>"
+  },
+  "CVE-2018-0171": {
+    "cvss": 9.8,
+    "severity": "critical",
+    "affected": "Cisco IOS and IOS XE — Smart Install (TCP/4786)",
+    "description": "Smart Install buffer overflow allows unauthenticated remote code execution. Actively exploited in the wild by threat actors including APT groups.",
+    "remediation": "no vstack — disables Smart Install. Verify with: show vstack config"
+  },
+  "CVE-2021-1554": {
+    "cvss": 8.8,
+    "severity": "high",
+    "affected": "Cisco IOS XE — HTTP Server",
+    "description": "HTTP server authentication bypass leading to privilege escalation. Attacker can gain level-15 access without credentials.",
+    "remediation": "no ip http server\nno ip http secure-server\nIf required, restrict with: ip http access-class <ACL> in"
+  },
+  "CVE-2023-20198": {
+    "cvss": 10.0,
+    "severity": "critical",
+    "affected": "Cisco IOS XE — Web UI (HTTP/HTTPS management interface)",
+    "description": "Unauthenticated remote code execution via IOS XE web management interface. Mass-exploited ITW; attackers created privileged local accounts and deployed implants.",
+    "remediation": "no ip http server\nno ip http secure-server\nApply Cisco Security Advisory patch immediately. If web UI required, restrict to trusted subnets."
+  },
+  "CVE-2020-3187": {
+    "cvss": 9.1,
+    "severity": "critical",
+    "affected": "Cisco ASA / FTD — WebVPN / AnyConnect",
+    "description": "Path traversal allows unauthenticated read and delete of files from flash filesystem. Can be used to steal configs containing password hashes.",
+    "remediation": "Apply Cisco patch. Disable clientless SSL VPN if not required: webvpn / no enable outside"
+  },
+  "CVE-2016-6385": {
+    "cvss": 7.8,
+    "severity": "high",
+    "affected": "Cisco IOS — Smart Install",
+    "description": "Memory leak in Smart Install processing causes device reload, enabling denial-of-service against network infrastructure.",
+    "remediation": "no vstack — disable Smart Install entirely"
+  }
+}

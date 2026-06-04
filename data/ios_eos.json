@@ -1,0 +1,21 @@
+{
+  "12.1": {"status": "end_of_life",     "eos_date": "2012-08-31", "ldos_date": "2013-01-31"},
+  "12.2": {"status": "end_of_life",     "eos_date": "2016-01-31", "ldos_date": "2017-01-31"},
+  "12.3": {"status": "end_of_life",     "eos_date": "2012-08-31", "ldos_date": "2013-01-31"},
+  "12.4": {"status": "end_of_life",     "eos_date": "2014-10-31", "ldos_date": "2015-10-31"},
+  "15.0": {"status": "end_of_life",     "eos_date": "2019-01-26", "ldos_date": "2024-01-31"},
+  "15.1": {"status": "end_of_life",     "eos_date": "2019-01-26", "ldos_date": "2024-01-31"},
+  "15.2": {"status": "end_of_life",     "eos_date": "2020-08-31", "ldos_date": "2025-08-31"},
+  "15.3": {"status": "end_of_life",     "eos_date": "2020-08-31", "ldos_date": "2025-08-31"},
+  "15.4": {"status": "end_of_life",     "eos_date": "2021-03-27", "ldos_date": "2026-03-31"},
+  "15.5": {"status": "end_of_support",  "eos_date": "2022-01-31", "ldos_date": "2027-01-31"},
+  "15.6": {"status": "end_of_support",  "eos_date": "2023-01-31", "ldos_date": "2028-01-31"},
+  "15.7": {"status": "active",          "eos_date": null,         "ldos_date": null},
+  "16.6": {"status": "end_of_support",  "eos_date": "2022-03-31", "ldos_date": "2027-03-31"},
+  "16.9": {"status": "active",          "eos_date": null,         "ldos_date": null},
+  "16.12":{"status": "active",          "eos_date": null,         "ldos_date": null},
+  "17.3": {"status": "active",          "eos_date": null,         "ldos_date": null},
+  "17.6": {"status": "active",          "eos_date": null,         "ldos_date": null},
+  "17.9": {"status": "active",          "eos_date": null,         "ldos_date": null},
+  "17.12":{"status": "active",          "eos_date": null,         "ldos_date": null}
+}

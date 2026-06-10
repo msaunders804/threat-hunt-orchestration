@@ -40,7 +40,7 @@ _agent = create_deep_agent(
 )
 
 
-def analyze_router_config(config: str) -> str:
+def analyze_router_config(router_config: str) -> str:
     """Analyze a Cisco IOS router or switch configuration for security vulnerabilities.
 
     Use this tool when the user provides a Cisco IOS config — either pasted directly
@@ -48,13 +48,13 @@ def analyze_router_config(config: str) -> str:
     Also use when asked to audit, harden, or review a network device configuration.
 
     Args:
-        config: Raw Cisco IOS configuration text to analyze.
+        router_config: Raw Cisco IOS configuration text to analyze.
 
     Returns:
         Markdown security audit report with findings, CVEs, risk score, and remediation steps.
     """
-    logger.info("analyze_router_config: config_len=%d", len(config))
-    result = _agent.invoke({"messages": [{"role": "user", "content": config}]})
+    logger.info("analyze_router_config: config_len=%d", len(router_config))
+    result = _agent.invoke({"messages": [{"role": "user", "content": router_config}]})
     messages = result.get("messages", [])
     if not messages:
         return "Router config analysis returned no results."

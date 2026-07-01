@@ -1,0 +1,35 @@
+# Packetbeat — network flows + protocol metadata → Elasticsearch.
+# Produces the ECS fields the orchestrator's top-talkers and IOC search rely on:
+#   source.ip, source.bytes, destination.ip  (flows)
+#   dns.question.name                          (DNS IOC hits)
+#
+# Run on the mini PC (the box seeing LAN traffic). Native install is simplest:
+#   sudo packetbeat -e -c packetbeat.yml
+# Or containerized with host networking (see infra/README.md).
+# Index defaults to packetbeat-<ver>-* → matches ES_FLOW_INDEX=packetbeat-*.
+
+packetbeat.interfaces.device: any        # or eth0 / your capture NIC
+
+# Flows give per-conversation byte counts → top talkers.
+packetbeat.flows:
+  timeout: 30s
+  period: 10s
+
+packetbeat.protocols:
+  - type: dns
+    ports: [53]
+  - type: http
+    ports: [80, 8080, 8000]
+  - type: tls
+    ports: [443, 993, 995]
+
+# ECS + index naming handled by Packetbeat defaults.
+output.elasticsearch:
+  hosts: ["http://MINI_PC_IP:9200"]
+  username: "elastic"
+  password: "changeme-elastic"     # or use api_key: "id:key"
+
+setup.kibana:
+  host: "http://MINI_PC_IP:5601"
+
+logging.level: info

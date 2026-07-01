@@ -1,0 +1,66 @@
+# Single-node Elasticsearch + Kibana for the threat-hunt test lab.
+#
+# Security is ENABLED (so the orchestrator's ES_API_KEY / basic-auth path is
+# exercised like prod) but HTTP TLS is OFF to keep the lab simple. Do not expose
+# these ports beyond a trusted LAN.
+#
+#   cp .env.example .env   # then edit passwords
+#   docker compose up -d
+#
+services:
+  # One-shot: waits for ES, then sets the kibana_system password so Kibana can log in.
+  setup:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    depends_on:
+      es01:
+        condition: service_healthy
+    command: >
+      bash -c '
+        echo "Setting kibana_system password...";
+        until curl -s -u "elastic:${ELASTIC_PASSWORD}"
+          -X POST "http://es01:9200/_security/user/kibana_system/_password"
+          -H "Content-Type: application/json"
+          -d "{\"password\":\"${KIBANA_PASSWORD}\"}" | grep -q "^{}"; do
+          sleep 3;
+        done;
+        echo "kibana_system password set.";
+      '
+
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    container_name: es01
+    environment:
+      - discovery.type=single-node
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - xpack.license.self_generated.type=${LICENSE}
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false      # TLS off on HTTP (lab only)
+      - "ES_JAVA_OPTS=-Xms${ES_HEAP} -Xmx${ES_HEAP}"
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock: { soft: -1, hard: -1 }
+    ports:
+      - "${ES_PORT}:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -u elastic:${ELASTIC_PASSWORD} http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
+    container_name: kibana
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    environment:
+      - ELASTICSEARCH_HOSTS=http://es01:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+    ports:
+      - "${KIBANA_PORT}:5601"
+
+volumes:
+  esdata:

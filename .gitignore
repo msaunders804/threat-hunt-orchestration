@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# Secrets / local config
+.env
+.env.local
+
+# Generated hunt artifacts (Obsidian notes, Sigma rules)
+vault/
+
+# Large offline data downloaded at setup (kept out of git)
+data/attack/enterprise-attack.json
+
+# OS / editor
+.DS_Store
+Thumbs.db

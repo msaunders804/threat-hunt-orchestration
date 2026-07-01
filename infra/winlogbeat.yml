@@ -1,0 +1,30 @@
+# Winlogbeat — Windows endpoint events → Elasticsearch.
+# Runs ON each Windows host you want to monitor (not in the compose stack).
+# With Sysmon installed, this yields the ECS fields the IOC hash-search uses:
+#   file.hash.sha256 / .md5 / .sha1, process.*, source.ip, destination.ip
+#
+# Install Sysmon first (SwiftOnSecurity config is a good baseline), then:
+#   .\winlogbeat.exe -e -c winlogbeat.yml
+# Index defaults to winlogbeat-<ver>-* → matches ES_EVENT_INDEX=...,winlogbeat-*.
+
+winlogbeat.event_logs:
+  - name: Microsoft-Windows-Sysmon/Operational
+    processors:
+      - script:
+          lang: javascript
+          id: sysmon
+          file: ${path.home}/module/sysmon/config/winlogbeat-sysmon.js
+  - name: Security
+    ignore_older: 72h
+  - name: Application
+  - name: System
+
+output.elasticsearch:
+  hosts: ["http://MINI_PC_IP:9200"]
+  username: "elastic"
+  password: "changeme-elastic"     # or use api_key: "id:key"
+
+setup.kibana:
+  host: "http://MINI_PC_IP:5601"
+
+logging.level: info

@@ -1,0 +1,9 @@
+[
+  { "ioc": "198.51.100.10", "ioc_type": "ips", "index": "packetbeat-*", "count": 341, "first_seen": "2026-06-28T02:14:00Z", "last_seen": "2026-06-30T23:51:00Z", "internal_peers": ["10.0.0.50"] },
+  { "ioc": "185.220.101.1", "ioc_type": "ips", "index": "zeek-conn-*", "count": 88, "first_seen": "2026-06-29T18:02:00Z", "last_seen": "2026-06-30T21:10:00Z", "internal_peers": ["10.0.0.23"] },
+  { "ioc": "203.0.113.42", "ioc_type": "ips", "index": "zeek-conn-*", "count": 512, "first_seen": "2026-06-30T00:03:00Z", "last_seen": "2026-06-30T22:40:00Z", "internal_peers": ["10.0.0.7"] },
+  { "ioc": "evildomain.xyz", "ioc_type": "domains", "index": "logs-*", "count": 12, "first_seen": "2026-06-30T09:20:00Z", "last_seen": "2026-06-30T14:05:00Z", "internal_peers": ["10.0.0.10"] },
+  { "ioc": "update-microsoft-secure.com", "ioc_type": "domains", "index": "logs-*", "count": 7, "first_seen": "2026-06-30T11:00:00Z", "last_seen": "2026-06-30T19:30:00Z", "internal_peers": ["10.0.0.88"] },
+  { "ioc": "098f6bcd4621d373cade4e832627b4f6", "ioc_type": "hashes", "index": "winlogbeat-*", "count": 3, "first_seen": "2026-06-30T12:11:00Z", "last_seen": "2026-06-30T12:19:00Z", "internal_peers": ["10.0.0.50"] },
+  { "ioc": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", "ioc_type": "hashes", "index": "winlogbeat-*", "count": 1, "first_seen": "2026-06-30T12:22:00Z", "last_seen": "2026-06-30T12:22:00Z", "internal_peers": ["10.0.0.50"] }
+]

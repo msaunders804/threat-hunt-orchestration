@@ -1,17 +1,12 @@
 import json
 import logging
-import re
 
-from ..client import _client, _model
+from langchain_core.messages import AIMessage, HumanMessage
+
+from ...llm import get_chat_model
+from ...llm_util import cache_read_tokens, cached_system, message_text, strip_fences
 
 logger = logging.getLogger(__name__)
-
-
-def _strip_fences(text: str) -> str:
-    text = text.strip()
-    text = re.sub(r'^```(?:json)?\s*\n?', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'\n?```\s*$', '', text)
-    return text.strip()
 
 
 SYSTEM_PROMPT = """You are a senior network security engineer and threat hunter specializing in Cisco IOS device hardening, configuration auditing, and post-compromise analysis.
@@ -126,22 +121,17 @@ def analyze_router_config(config_blob: str) -> str:
     """
     logger.info("Analyzing router config (config_len=%d)", len(config_blob))
 
-    messages = _FEW_SHOT + [{"role": "user", "content": config_blob}]
+    # Convert the provider-neutral few-shot dicts into LangChain messages so the
+    # same prompt runs on Anthropic, Bedrock, or a local Ollama model.
+    few_shot = [
+        HumanMessage(m["content"]) if m["role"] == "user" else AIMessage(m["content"])
+        for m in _FEW_SHOT
+    ]
+    messages = [cached_system(SYSTEM_PROMPT), *few_shot, HumanMessage(config_blob)]
 
-    response = _client.messages.create(
-        model=_model,
-        max_tokens=4096,
-        system=[
-            {
-                "type": "text",
-                "text": SYSTEM_PROMPT,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        messages=messages,
-    )
-
-    raw = _strip_fences(response.content[0].text)
+    # "triage" role → frontier model by default; a config audit is reasoning-heavy.
+    response = get_chat_model("triage").invoke(messages)
+    raw = strip_fences(message_text(response))
 
     try:
         parsed = json.loads(raw)
@@ -154,8 +144,7 @@ def analyze_router_config(config_blob: str) -> str:
             "immediate_actions": [],
         }
 
-    usage = getattr(response, "usage", None)
-    cache_read = getattr(usage, "cache_read_input_tokens", 0)
+    cache_read = cache_read_tokens(response)
     logger.info(
         "Router analysis done: findings=%d risk_score=%d cache_read=%d",
         len(parsed.get("findings", [])),

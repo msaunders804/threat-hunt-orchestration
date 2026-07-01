@@ -21,6 +21,15 @@ from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
+from .agents.tools.config_tools import check_ios_eos, get_hardening_guidance, lookup_cve
+from .agents.tools.file_tools import (
+    list_obsidian_vaults,
+    read_knowledge_base,
+    read_task_list,
+    set_shared_folder,
+    update_task_status,
+    write_hunt_note,
+)
 from .branches import network, threatintel
 from .branches.network.router_config import analyze_router_config
 from .branches.threatintel.ioc_enrich import enrich_iocs
@@ -42,9 +51,21 @@ or asks whether an indicator is malicious, suspicious, or known bad.
 - Call `analyze_router_config` when the user provides a Cisco IOS router or switch configuration — \
 either pasted directly or inside a file injection block ("--- Contents of X ---" / "--- End of X ---"). \
 Also call it when asked to audit, harden, or review a network device config.
-- Call both tools when the question involves both IOCs and a router config, then correlate the findings.
+- When auditing a config, enrich findings: call `check_ios_eos` with the IOS version line, \
+`lookup_cve` for configs tied to a known CVE (Smart Install → CVE-2018-0171; HTTP server → \
+CVE-2023-20198; SNMP v1/v2c → CVE-2017-6627), and `get_hardening_guidance` for exact \
+remediation commands (topics: snmp, telnet, acl, bgp, logging, passwords, cdp, vty).
+- Call both `enrich_iocs` and `analyze_router_config` when the question involves both, then correlate.
 - If the input is genuinely ambiguous — no config lines, no IOC indicators — ask one focused \
 clarifying question rather than guessing.
+
+## Vault & task workflow (Obsidian)
+- If any file tool raises a SHARED_FOLDER error, call `list_obsidian_vaults`, present the options, \
+and after the user confirms, call `set_shared_folder` before retrying.
+- When asked to work tasks: `read_task_list` → for each open task, `update_task_status(file, "in_progress")`, \
+`read_knowledge_base` for context, investigate, `write_hunt_note(title, report)`, then \
+`update_task_status(file, "complete")`. Summarize what was completed at the end.
+- Call `read_knowledge_base` before starting any investigation — prior notes may hold relevant context.
 
 ## Report format
 Structure every response as a markdown report:
@@ -64,7 +85,19 @@ what additional information would help."""
 # Built once; model comes from the provider factory (env-swappable to Ollama/Bedrock).
 _generalist = create_deep_agent(
     model=get_chat_model("synthesis"),
-    tools=[enrich_iocs, analyze_router_config],
+    tools=[
+        enrich_iocs,
+        analyze_router_config,
+        check_ios_eos,
+        lookup_cve,
+        get_hardening_guidance,
+        list_obsidian_vaults,
+        set_shared_folder,
+        read_task_list,
+        update_task_status,
+        read_knowledge_base,
+        write_hunt_note,
+    ],
     system_prompt=GENERALIST_PROMPT,
 )
 

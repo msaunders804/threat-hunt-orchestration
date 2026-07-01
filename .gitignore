@@ -1,8 +1,11 @@
 # Python
 __pycache__/
 *.py[cod]
+*.pyo
 *.egg-info/
 .pytest_cache/
+
+# Virtual environments
 .venv/
 venv/
 env/
@@ -16,6 +19,10 @@ vault/
 
 # Large offline data downloaded at setup (kept out of git)
 data/attack/enterprise-attack.json
+
+# IDE
+.idea/
+.vscode/
 
 # OS / editor
 .DS_Store
